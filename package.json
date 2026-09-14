@@ -1,0 +1,44 @@
+{
+  "name": "app-diana-llm-analyzer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Inteligência da DIANA: pacote @diana/contracts + gateway OCI Generative AI (OciGenAiRiskAnalyzer) com fallback para mock.",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "workspaces": [
+    "contracts"
+  ],
+  "scripts": {
+    "build:contracts": "npm run --workspace @diana/contracts build",
+    "build:schema": "npm run --workspace @diana/contracts build:schema",
+    "build": "npm run build:contracts && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run build:contracts && tsc -p tsconfig.json --noEmit && npm run --workspace @diana/contracts typecheck",
+    "test": "npm run build:contracts && vitest run",
+    "check": "npm run lint && npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@diana/contracts": "*",
+    "zod": "^3.23.8"
+  },
+  "optionalDependencies": {
+    "oci-common": "^2.100.0",
+    "oci-generativeaiinference": "^2.100.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@types/node": "^22.8.0",
+    "eslint": "^9.13.0",
+    "globals": "^15.11.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.11.0",
+    "vitest": "^2.1.4"
+  }
+}
