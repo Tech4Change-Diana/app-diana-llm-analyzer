@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/LlmAnalysisOutput",
+  "definitions": {
+    "LlmAnalysisOutput": {
+      "type": "object",
+      "properties": {
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LlmSignal"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LlmCategoryPrediction"
+          }
+        },
+        "progression": {
+          "type": "string",
+          "description": "Descrição da progressão observada na janela (PT-BR), opcional."
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confiança global da interpretação, 0–1."
+        }
+      },
+      "required": [
+        "signals",
+        "categories",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "LlmSignal": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Indicador da taxonomia (§2.1); string aberta, saneada no gateway."
+        },
+        "confidence": {
+          "type": "number",
+          "description": "0–1."
+        },
+        "messageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "ids de mensagens da `Conversation` que embasam o sinal (auditabilidade)."
+        },
+        "severity": {
+          "$ref": "#/definitions/SignalSeverity"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Justificativa curta em PT-BR (alimenta a explicação)."
+        }
+      },
+      "required": [
+        "type",
+        "confidence",
+        "messageIds",
+        "severity"
+      ],
+      "additionalProperties": false
+    },
+    "SignalSeverity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Sinais detectados pela camada de interpretação (LLM).\n\n`DetectedSignal.type` é `string` (aberto): a taxonomia de indicadores é expansível sem mudança estrutural do contrato — ver `taxonomy.ts`."
+    },
+    "LlmCategoryPrediction": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "$ref": "#/definitions/RiskCategory"
+        },
+        "probability": {
+          "type": "number",
+          "description": "0–1."
+        }
+      },
+      "required": [
+        "category",
+        "probability"
+      ],
+      "additionalProperties": false
+    },
+    "RiskCategory": {
+      "type": "string",
+      "enum": [
+        "grooming",
+        "image_request",
+        "cyberbullying",
+        "blackmail",
+        "threat",
+        "personal_information",
+        "isolation",
+        "sexual_content",
+        "emotional_distress",
+        "self_harm"
+      ]
+    }
+  }
+}

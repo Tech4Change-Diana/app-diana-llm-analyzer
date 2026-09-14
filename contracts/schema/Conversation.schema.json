@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/Conversation",
+  "definitions": {
+    "Conversation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "childId": {
+          "type": "string"
+        },
+        "childName": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "contactName": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConversationMessage"
+          }
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "ISO 8601."
+        }
+      },
+      "required": [
+        "id",
+        "childId",
+        "childName",
+        "contactId",
+        "contactName",
+        "messages",
+        "startedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ConversationMessage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "author": {
+          "$ref": "#/definitions/MessageAuthor"
+        },
+        "text": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO 8601."
+        }
+      },
+      "required": [
+        "id",
+        "author",
+        "text",
+        "timestamp"
+      ],
+      "additionalProperties": false
+    },
+    "MessageAuthor": {
+      "type": "string",
+      "enum": [
+        "child",
+        "other"
+      ],
+      "description": "Janela de contexto (entrada da análise).\n\nPortado de `app-diana-monitoring-lading-page/src/ml/types.ts`, espelhado em `app-diana-monitoring/src/contracts/types.ts`. Descrição canônica em `app-diana-monitoring/docs/contracts.md`."
+    }
+  }
+}
