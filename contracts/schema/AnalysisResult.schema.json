@@ -1,0 +1,400 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/AnalysisResult",
+  "definitions": {
+    "AnalysisResult": {
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string"
+        },
+        "assessment": {
+          "$ref": "#/definitions/RiskAssessment"
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DetectedSignal"
+          }
+        },
+        "explanation": {
+          "$ref": "#/definitions/ExplanationResult"
+        },
+        "features": {
+          "$ref": "#/definitions/ConversationFeatures"
+        },
+        "model": {
+          "$ref": "#/definitions/ModelMetadata"
+        },
+        "privacy": {
+          "$ref": "#/definitions/PrivacyReport"
+        },
+        "audit": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AuditEntry"
+          }
+        },
+        "processedAt": {
+          "type": "string",
+          "description": "ISO 8601."
+        }
+      },
+      "required": [
+        "conversationId",
+        "assessment",
+        "signals",
+        "explanation",
+        "features",
+        "model",
+        "privacy",
+        "audit",
+        "processedAt"
+      ],
+      "additionalProperties": false
+    },
+    "RiskAssessment": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "$ref": "#/definitions/RiskLevel"
+        },
+        "priority": {
+          "$ref": "#/definitions/RiskPriority"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RiskPrediction"
+          }
+        },
+        "requiresGuardianAttention": {
+          "type": "boolean"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "description": "Indicador técnico 0–100."
+        }
+      },
+      "required": [
+        "level",
+        "priority",
+        "categories",
+        "requiresGuardianAttention",
+        "rationale",
+        "score"
+      ],
+      "additionalProperties": false
+    },
+    "RiskLevel": {
+      "type": "string",
+      "enum": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Consolidação de risco (produzida de forma determinística pelo Risk Engine)."
+    },
+    "RiskPriority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "RiskPrediction": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "$ref": "#/definitions/RiskCategory"
+        },
+        "probability": {
+          "type": "number"
+        },
+        "level": {
+          "$ref": "#/definitions/RiskLevel"
+        }
+      },
+      "required": [
+        "category",
+        "probability",
+        "level"
+      ],
+      "additionalProperties": false
+    },
+    "RiskCategory": {
+      "type": "string",
+      "enum": [
+        "grooming",
+        "image_request",
+        "cyberbullying",
+        "blackmail",
+        "threat",
+        "personal_information",
+        "isolation",
+        "sexual_content",
+        "emotional_distress",
+        "self_harm"
+      ]
+    },
+    "DetectedSignal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "description": "0–1."
+        },
+        "messageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/definitions/SignalSeverity"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "confidence",
+        "messageIds",
+        "title",
+        "description",
+        "severity"
+      ],
+      "additionalProperties": false
+    },
+    "SignalSeverity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Sinais detectados pela camada de interpretação (LLM).\n\n`DetectedSignal.type` é `string` (aberto): a taxonomia de indicadores é expansível sem mudança estrutural do contrato — ver `taxonomy.ts`."
+    },
+    "ExplanationResult": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "topSignals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DetectedSignal"
+          }
+        },
+        "contextualFactors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContextualFactor"
+          }
+        },
+        "recommendedActions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "summary",
+        "topSignals",
+        "contextualFactors",
+        "recommendedActions"
+      ],
+      "additionalProperties": false
+    },
+    "ContextualFactor": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "content",
+            "sequence",
+            "frequency",
+            "escalation",
+            "combination"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "contribution": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "label",
+        "description",
+        "contribution"
+      ],
+      "additionalProperties": false
+    },
+    "ConversationFeatures": {
+      "type": "object",
+      "properties": {
+        "secrecyRequests": {
+          "type": "number"
+        },
+        "imageRequests": {
+          "type": "number"
+        },
+        "personalInfoRequests": {
+          "type": "number"
+        },
+        "isolationAttempts": {
+          "type": "number"
+        },
+        "threats": {
+          "type": "number"
+        },
+        "insults": {
+          "type": "number"
+        },
+        "blackmailAttempts": {
+          "type": "number"
+        },
+        "sexualContentSignals": {
+          "type": "number"
+        },
+        "emotionalDistressSignals": {
+          "type": "number"
+        },
+        "selfHarmSignals": {
+          "type": "number"
+        },
+        "messageCount": {
+          "type": "number"
+        },
+        "suspiciousMessageCount": {
+          "type": "number"
+        },
+        "conversationEscalation": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "secrecyRequests",
+        "imageRequests",
+        "personalInfoRequests",
+        "isolationAttempts",
+        "threats",
+        "insults",
+        "blackmailAttempts",
+        "sexualContentSignals",
+        "emotionalDistressSignals",
+        "selfHarmSignals",
+        "messageCount",
+        "suspiciousMessageCount",
+        "conversationEscalation"
+      ],
+      "additionalProperties": false,
+      "description": "Contadores derivados da conversa, insumo da consolidação determinística."
+    },
+    "ModelMetadata": {
+      "type": "object",
+      "properties": {
+        "modelName": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "development",
+            "production"
+          ]
+        }
+      },
+      "required": [
+        "modelName",
+        "version",
+        "environment"
+      ],
+      "additionalProperties": false,
+      "description": "Metadados do modelo — rastreabilidade (RF-14).\n\n`environment` distingue resultado real (`development`/`production`) de fallback mock (`mock`)."
+    },
+    "PrivacyReport": {
+      "type": "object",
+      "properties": {
+        "prepared": {
+          "type": "boolean"
+        },
+        "piiMinimized": {
+          "type": "boolean"
+        },
+        "pseudonymizedFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "protected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "prepared",
+        "piiMinimized",
+        "pseudonymizedFields",
+        "protected"
+      ],
+      "additionalProperties": false
+    },
+    "AuditEntry": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "stage": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "stage",
+        "description"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

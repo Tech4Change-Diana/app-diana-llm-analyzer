@@ -1,0 +1,27 @@
+{
+  "name": "@diana/contracts",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Contrato de domínio compartilhado da DIANA (tipos + JSON Schema). ZERO dependências de runtime.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema/*": "./schema/*"
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:schema": "node --experimental-strip-types scripts/build-schema.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "ts-json-schema-generator": "^2.3.0",
+    "typescript": "^5.6.3"
+  }
+}
