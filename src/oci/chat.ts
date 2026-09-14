@@ -12,6 +12,12 @@ export interface ChatRequestParams {
   user: string;
   temperature: number;
   maxTokens: number;
+  /**
+   * JSON Schema da saída estruturada. Quando presente, é enviado ao modelo via
+   * `responseFormat: JSON_SCHEMA` (structured outputs nativo — §3.4). O zod no
+   * cliente continua sendo o guardrail que não depende do suporte do modelo (R2).
+   */
+  responseSchema?: Record<string, unknown>;
 }
 
 /** Modo de serviço: on-demand (modelId) OU dedicado (endpointId). */
@@ -24,21 +30,37 @@ export function buildServingMode(config: OciConfig): any {
 
 /** Monta o `ChatDetails` (apiFormat GENERIC), com SYSTEM + USER. */
 export function buildChatDetails(config: OciConfig, params: ChatRequestParams): any {
+  const chatRequest: any = {
+    apiFormat: "GENERIC",
+    messages: [
+      { role: "SYSTEM", content: [{ type: "TEXT", text: params.system }] },
+      { role: "USER", content: [{ type: "TEXT", text: params.user }] },
+    ],
+    maxTokens: params.maxTokens,
+    temperature: params.temperature,
+    topP: 0.9,
+    numGenerations: 1,
+    isStream: false,
+  };
+
+  // Saída estruturada nativa (structured outputs) quando um schema é fornecido.
+  // Modelos sem suporte ignoram/rejeitam — por isso é opcional e o zod valida.
+  if (params.responseSchema) {
+    chatRequest.responseFormat = {
+      type: "JSON_SCHEMA",
+      jsonSchema: {
+        name: "LlmAnalysisOutput",
+        description: "Interpretação estruturada da janela de conversa (indicadores DIANA).",
+        schema: params.responseSchema,
+        isStrict: false,
+      },
+    };
+  }
+
   return {
     compartmentId: config.compartmentOcid,
     servingMode: buildServingMode(config),
-    chatRequest: {
-      apiFormat: "GENERIC",
-      messages: [
-        { role: "SYSTEM", content: [{ type: "TEXT", text: params.system }] },
-        { role: "USER", content: [{ type: "TEXT", text: params.user }] },
-      ],
-      maxTokens: params.maxTokens,
-      temperature: params.temperature,
-      topP: 0.9,
-      numGenerations: 1,
-      isStream: false,
-    },
+    chatRequest,
   };
 }
 

@@ -28,8 +28,6 @@ export interface WindowMetadata {
   startedAt: string;
   endedAt: string;
   durationMinutes: number;
-  /** fração 0–1: quão concentradas as mensagens estão na 2ª metade da janela. */
-  escalationObserved: number;
 }
 
 export function computeWindowMetadata(conversation: Conversation): WindowMetadata {
@@ -44,19 +42,11 @@ export function computeWindowMetadata(conversation: Conversation): WindowMetadat
   const safeStart = Number.isNaN(start) ? 0 : start;
   const safeEnd = Number.isNaN(end) ? safeStart : end;
 
-  const total = messages.length;
-  let escalation = 0;
-  if (total > 1) {
-    const avgIndex = messages.reduce((acc, _m, i) => acc + i / (total - 1), 0) / total; // ~0.5 uniforme
-    escalation = Math.min(1, Math.max(0, avgIndex));
-  }
-
   return {
-    messageCount: total,
+    messageCount: messages.length,
     startedAt: new Date(safeStart).toISOString(),
     endedAt: new Date(safeEnd).toISOString(),
     durationMinutes: Math.round((safeEnd - safeStart) / 60000),
-    escalationObserved: Math.round(escalation * 100) / 100,
   };
 }
 
@@ -87,7 +77,9 @@ export function buildUserPrompt(conversation: Conversation): string {
     `- início: ${meta.startedAt}`,
     `- fim: ${meta.endedAt}`,
     `- duração (min): ${meta.durationMinutes}`,
-    `- escalada observada (0–1): ${meta.escalationObserved}`,
+    "",
+    "Avalie a PROGRESSÃO dos sinais ao longo da transcrição abaixo (a ordem",
+    "temporal importa — ver o horário relativo de cada mensagem).",
     "",
     "TRANSCRIÇÃO (ordenada por tempo; horário relativo ao início):",
     renderTranscript(conversation),

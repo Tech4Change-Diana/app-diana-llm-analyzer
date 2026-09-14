@@ -89,6 +89,10 @@ export function parseLlmOutput(raw: string): LlmAnalysisOutput {
  * inexistentes e clampa `confidence`/`probability` a [0,1] (§3.5). Tipos
  * desconhecidos são MANTIDOS (a taxonomia é expansível) — o mapeamento usa o
  * fallback de categoria registrado.
+ *
+ * Sinais cujos `messageIds` ficam TODOS inválidos (alucinação) são DESCARTADOS:
+ * o system prompt exige que cada sinal cite mensagens reais (RF-14), e um sinal
+ * sem embasamento não deve inflar `signals.length`/score.
  */
 export function sanitizeLlmOutput(
   output: LlmAnalysisOutput,
@@ -96,11 +100,13 @@ export function sanitizeLlmOutput(
 ): LlmAnalysisOutput {
   const valid = new Set(validMessageIds);
   return {
-    signals: output.signals.map((s) => ({
-      ...s,
-      confidence: clamp01(s.confidence),
-      messageIds: s.messageIds.filter((id) => valid.has(id)),
-    })),
+    signals: output.signals
+      .map((s) => ({
+        ...s,
+        confidence: clamp01(s.confidence),
+        messageIds: s.messageIds.filter((id) => valid.has(id)),
+      }))
+      .filter((s) => s.messageIds.length > 0),
     categories: output.categories.map((c) => ({
       ...c,
       probability: clamp01(c.probability),

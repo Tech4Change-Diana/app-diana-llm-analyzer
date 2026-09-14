@@ -31,6 +31,9 @@ export interface OciConfig {
   /** Reportado em `ModelMetadata.environment` no caminho OCI real. */
   environment: ModelEnvironment;
 
+  /** Envia o JSON Schema nativo (`responseFormat: JSON_SCHEMA`) ao modelo. */
+  structuredOutput: boolean;
+
   temperature: number;
   maxTokens: number;
   requestTimeoutMs: number;
@@ -53,6 +56,9 @@ const rawSchema = z.object({
   OCI_CONFIG_PROFILE: z.string().trim().min(1).default("DEFAULT"),
 
   OCI_GENAI_ENV: z.enum(["mock", "development", "production"]).default("development"),
+
+  // Env vars são strings; evitamos z.coerce.boolean (que trata "false" como true).
+  OCI_STRUCTURED_OUTPUT: z.enum(["true", "false"]).default("true"),
 
   OCI_GENAI_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.1),
   OCI_GENAI_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
@@ -85,6 +91,7 @@ export function loadOciConfig(env: NodeJS.ProcessEnv = process.env): OciConfig {
     configFile: e.OCI_CONFIG_FILE,
     configProfile: e.OCI_CONFIG_PROFILE,
     environment: e.OCI_GENAI_ENV,
+    structuredOutput: e.OCI_STRUCTURED_OUTPUT === "true",
     temperature: e.OCI_GENAI_TEMPERATURE,
     maxTokens: e.OCI_GENAI_MAX_TOKENS,
     requestTimeoutMs: e.OCI_REQUEST_TIMEOUT_MS,

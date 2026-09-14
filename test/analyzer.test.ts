@@ -16,14 +16,45 @@ const ociConfig = loadOciConfig({
 
 describe("OciGenAiRiskAnalyzer", () => {
   it("caminho feliz: usa a OCI (invoker mockado) e não cai no mock", async () => {
+    let receivedSchema: unknown;
+    let receivedSignal: AbortSignal | undefined;
     const invoker: ChatInvoker = {
-      chat: async () => validLlmOutputJson(),
+      chat: async (params, signal) => {
+        receivedSchema = params.responseSchema;
+        receivedSignal = signal;
+        return validLlmOutputJson();
+      },
     };
     const analyzer = new OciGenAiRiskAnalyzer(ociConfig, { invoker });
     const result = await analyzer.analyzeConversation(groomingConversation);
 
     expect(result.model.environment).toBe("development");
     expect(result.signals.map((s) => s.type)).toContain("image_request");
+    // achado A: o schema nativo é enviado ao invoker; achado D: signal propagado.
+    expect(receivedSchema).toBeDefined();
+    expect(receivedSignal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("OCI_STRUCTURED_OUTPUT=false não envia responseSchema (achado A, toggle)", async () => {
+    let receivedSchema: unknown = "sentinela";
+    const invoker: ChatInvoker = {
+      chat: async (params) => {
+        receivedSchema = params.responseSchema;
+        return validLlmOutputJson();
+      },
+    };
+    const noSchemaConfig = loadOciConfig({
+      ANALYZER_MODE: "oci",
+      OCI_COMPARTMENT_OCID: "ocid1.compartment.oc1..exemplo",
+      OCI_GENAI_MODEL_ID: "cohere.command-r-plus",
+      OCI_GENAI_ENV: "development",
+      OCI_STRUCTURED_OUTPUT: "false",
+      LOG_LEVEL: "error",
+    });
+    await new OciGenAiRiskAnalyzer(noSchemaConfig, { invoker }).analyzeConversation(
+      groomingConversation,
+    );
+    expect(receivedSchema).toBeUndefined();
   });
 
   it("fallback: OCI lança erro => resultado com environment 'mock'", async () => {

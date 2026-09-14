@@ -56,6 +56,22 @@ describe("validação da saída da LLM", () => {
     expect(sane.confidence).toBe(0);
   });
 
+  it("descarta sinal cujos messageIds ficam todos inválidos (achado C)", () => {
+    const parsed = parseLlmOutput(
+      JSON.stringify({
+        signals: [
+          { type: "image_request", confidence: 0.6, messageIds: ["MSG-9"], severity: "high" },
+          { type: "secrecy_request", confidence: 0.7, messageIds: ["FANTASMA"], severity: "high" },
+        ],
+        categories: [],
+        confidence: 0.5,
+      }),
+    );
+    const sane = sanitizeLlmOutput(parsed, ["MSG-9"]);
+    expect(sane.signals).toHaveLength(1);
+    expect(sane.signals[0]?.type).toBe("image_request");
+  });
+
   it("mantém tipo desconhecido (taxonomia expansível)", () => {
     const parsed = parseLlmOutput(
       JSON.stringify({

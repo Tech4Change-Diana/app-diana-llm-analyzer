@@ -76,15 +76,34 @@ export function mapLlmOutputToAnalysisResult(
     features,
     model,
     privacy,
-    audit: buildAnalysisAudit(conversation.messages.length, assessment.priority, model.modelName),
+    audit: buildAnalysisAudit(conversation.messages.length, assessment.priority, model.modelName, {
+      llmOutput: output,
+    }),
     processedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * `categories`/`confidence` da LLM são **advisory-only** neste MVP: quem
+ * consolida `assessment.categories`/`score` é o Risk Engine determinístico (P2).
+ * Ainda assim os registramos na trilha de auditoria para **rastreabilidade**
+ * (RF-14) — permite auditar divergência entre a interpretação da LLM e a
+ * consolidação, sem deixar a LLM decidir o resultado.
+ */
+function summarizeLlmInterpretation(output: LlmAnalysisOutput): string {
+  const top = [...output.categories].sort((a, b) => b.probability - a.probability)[0];
+  const confPct = Math.round(output.confidence * 100);
+  const topPhrase = top
+    ? `top categoria "${top.category}" (${Math.round(top.probability * 100)}%)`
+    : "sem categorias sugeridas";
+  return `${topPhrase}; confiança global ${confPct}% (advisory)`;
 }
 
 function buildAnalysisAudit(
   messageCount: number,
   priority: string,
   modelName: string,
+  extra: { llmOutput: LlmAnalysisOutput },
 ): AuditEntry[] {
   const at = () => new Date().toISOString();
   return [
@@ -93,7 +112,9 @@ function buildAnalysisAudit(
     {
       timestamp: at(),
       stage: "ml_analysis",
-      description: `OCI Generative AI (${modelName}) interpretou a janela`,
+      description:
+        `OCI Generative AI (${modelName}) interpretou a janela — ` +
+        summarizeLlmInterpretation(extra.llmOutput),
     },
     { timestamp: at(), stage: "context_analysis", description: "Contexto consolidado" },
     { timestamp: at(), stage: "risk_engine", description: `Prioridade: ${priority}` },

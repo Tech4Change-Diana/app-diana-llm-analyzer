@@ -17,7 +17,13 @@ import { createLogger, type Logger } from "../logger.js";
 import { createOciChatInvoker, OciUnavailableError, type ChatInvoker } from "../oci/client.js";
 import { buildSystemPrompt } from "../prompt/system.js";
 import { buildUserPrompt } from "../prompt/render.js";
-import { parseLlmOutput, sanitizeLlmOutput, LlmSchemaError } from "../schema/llmOutput.js";
+import {
+  parseLlmOutput,
+  sanitizeLlmOutput,
+  buildResponseSchema,
+  LlmSchemaError,
+} from "../schema/llmOutput.js";
+import type { ChatRequestParams } from "../oci/chat.js";
 import { mapLlmOutputToAnalysisResult } from "./mapOutput.js";
 import { MockRiskAnalyzer } from "./MockRiskAnalyzer.js";
 
@@ -36,22 +42,6 @@ class TimeoutError extends Error {
     super(`Chamada à OCI excedeu ${ms}ms.`);
     this.name = "TimeoutError";
   }
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new TimeoutError(ms)), ms);
-    promise.then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    );
-  });
 }
 
 export class OciGenAiRiskAnalyzer implements RiskAnalyzer {
@@ -112,6 +102,9 @@ export class OciGenAiRiskAnalyzer implements RiskAnalyzer {
   private async callWithRetry(invoker: ChatInvoker, conversation: Conversation) {
     const system = buildSystemPrompt();
     const baseUser = buildUserPrompt(conversation);
+    // Saída estruturada nativa (JSON Schema) quando habilitada — o zod segue
+    // como guardrail independente do suporte do modelo (R2).
+    const responseSchema = this.config.structuredOutput ? buildResponseSchema() : undefined;
     const attempts = this.config.maxRetries + 1;
 
     let lastSchemaError: unknown;
@@ -120,15 +113,13 @@ export class OciGenAiRiskAnalyzer implements RiskAnalyzer {
         i === 0
           ? baseUser
           : `${baseUser}\n\nATENÇÃO: responda EXCLUSIVAMENTE com o objeto JSON válido, sem texto extra.`;
-      const raw = await withTimeout(
-        invoker.chat({
-          system,
-          user,
-          temperature: this.config.temperature,
-          maxTokens: this.config.maxTokens,
-        }),
-        this.config.requestTimeoutMs,
-      );
+      const raw = await this.invokeWithTimeout(invoker, {
+        system,
+        user,
+        temperature: this.config.temperature,
+        maxTokens: this.config.maxTokens,
+        responseSchema,
+      });
       try {
         return parseLlmOutput(raw);
       } catch (err) {
@@ -141,6 +132,31 @@ export class OciGenAiRiskAnalyzer implements RiskAnalyzer {
       }
     }
     throw lastSchemaError ?? new LlmSchemaError("Falha ao validar a saída da LLM.");
+  }
+
+  /**
+   * Chama o invoker com timeout, abortando o `signal` no estouro (cancelamento
+   * cooperativo — ver `ChatInvoker`). O timeout cai direto no fallback.
+   */
+  private invokeWithTimeout(invoker: ChatInvoker, params: ChatRequestParams): Promise<string> {
+    const ms = this.config.requestTimeoutMs;
+    const controller = new AbortController();
+    return new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        controller.abort();
+        reject(new TimeoutError(ms));
+      }, ms);
+      invoker.chat(params, controller.signal).then(
+        (v) => {
+          clearTimeout(timer);
+          resolve(v);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
   }
 }
 

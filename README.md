@@ -87,8 +87,9 @@ e o gateway OCI em `ANALYZER_MODE=oci`.
 1. `prompt/` monta system prompt (instruções + taxonomia + política P2/P3 +
    guardrail anti-injection) e a janela (metadados temporais + transcrição com
    `messageIds`).
-2. `oci/` chama a OCI Generative AI (GenericChatRequest), com política de saída
-   em JSON estrito.
+2. `oci/` chama a OCI Generative AI (GenericChatRequest) com **saída estruturada
+   nativa** (`responseFormat: JSON_SCHEMA`, quando `OCI_STRUCTURED_OUTPUT=true`);
+   o zod no cliente segue como guardrail independente do suporte do modelo (R2).
 3. `schema/llmOutput.ts` valida (zod) e saneia a resposta (descarta `messageIds`
    inexistentes, clampa confiança/probabilidade); 1 retry em falha de schema.
 4. `analyzer/mapOutput.ts` mapeia para `DetectedSignal[]` e roda a consolidação

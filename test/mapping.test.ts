@@ -37,6 +37,12 @@ describe("mapeamento saída da LLM -> AnalysisResult", () => {
     expect(cats).toContain("grooming");
   });
 
+  it("registra a interpretação da LLM (advisory) na auditoria (achado B)", () => {
+    const ml = result.audit.find((a) => a.stage === "ml_analysis");
+    expect(ml?.description).toContain("advisory");
+    expect(ml?.description).toContain("grooming");
+  });
+
   it("incorpora a progressão da LLM na explicação", () => {
     expect(result.explanation.summary).toContain("Interpretação do modelo");
     expect(result.explanation.topSignals.length).toBeGreaterThan(0);
